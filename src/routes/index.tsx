@@ -66,7 +66,58 @@ const TWO: Amounts = {
   oilSpoon: "2½ כפות",
 };
 
-const STEPS = [
+type Oven = "static" | "turbo";
+
+type OvenProfile = {
+  temp: string;
+  window: string;
+  mode: string;
+  bakeBody: string;
+  bakeSeconds: number;
+  bakeTimer: string;
+  swapBody: string;
+  swapSeconds: number;
+  swapTimer: string;
+  note: string;
+};
+
+type Step = {
+  id: string;
+  n: string;
+  title: string;
+  body: string;
+  seconds?: number;
+  timer?: string;
+};
+
+const OVENS: Record<Oven, OvenProfile> = {
+  static: {
+    temp: "210°",
+    window: "25–30",
+    mode: "בלי טורבו",
+    bakeBody: "210 מעלות, בלי טורבו, 25 עד 30 דקות.",
+    bakeSeconds: 28 * 60,
+    bakeTimer: "28:00",
+    swapBody: "אחרי 14 דקות מחליפים קומות ומסובבים כל תבנית.",
+    swapSeconds: 14 * 60,
+    swapTimer: "14:00",
+    note: "הכמויות הן של היבואן, כמו שכתוב על האריזה. הטיימר עומד על 28 דקות — אמצע הטווח.",
+  },
+  turbo: {
+    temp: "190°",
+    window: "20–24",
+    mode: "טורבו",
+    bakeBody: "190 מעלות עם טורבו. בודקים החל מ-20 דקות, עד כ-24, לפי הצבע.",
+    bakeSeconds: 22 * 60,
+    bakeTimer: "22:00",
+    swapBody: "אחרי 11 דקות מחליפים קומות ומסובבים כל תבנית.",
+    swapSeconds: 11 * 60,
+    swapTimer: "11:00",
+    note: "טורבו נותן חום אחיד יותר, אז יורדים ל-190. הטיימר על 22 דקות. הלחמניות מתייבשות מהר — עוצרים לפי צבע.",
+  },
+};
+
+const BASE_STEPS: Step[] = [
   {
     id: "mix",
     n: "01",
@@ -101,23 +152,31 @@ const STEPS = [
     seconds: 60 * 60,
     timer: "60:00",
   },
-  {
-    id: "bake",
-    n: "06",
-    title: "אפייה",
-    body: "210 מעלות, בלי טורבו, 25 עד 30 דקות.",
-    seconds: 28 * 60,
-    timer: "28:00",
-  },
-  {
-    id: "swap",
-    n: "07",
-    title: "שתי תבניות",
-    body: "אחרי 14 דקות מחליפים קומות ומסובבים כל תבנית.",
-    seconds: 14 * 60,
-    timer: "14:00",
-  },
-] as const;
+];
+
+function buildSteps(oven: Oven, packs: Packs): Step[] {
+  const profile = OVENS[oven];
+  const steps: Step[] = [
+    ...BASE_STEPS,
+    {
+      id: "bake",
+      n: "06",
+      title: "אפייה",
+      body: profile.bakeBody,
+      seconds: profile.bakeSeconds,
+      timer: profile.bakeTimer,
+    },
+    {
+      id: "swap",
+      n: "07",
+      title: "שתי תבניות",
+      body: profile.swapBody,
+      seconds: profile.swapSeconds,
+      timer: profile.swapTimer,
+    },
+  ];
+  return packs === 1 ? steps.filter((step) => step.id !== "swap") : steps;
+}
 
 function formatClock(total: number) {
   const s = Math.max(0, total);
@@ -128,6 +187,7 @@ function formatClock(total: number) {
 
 function Home() {
   const [packs, setPacks] = useState<Packs>(2);
+  const [oven, setOven] = useState<Oven>("static");
   const [done, setDone] = useState<string[]>([]);
   const [timerId, setTimerId] = useState<string | null>(null);
   const [left, setLeft] = useState(0);
@@ -137,8 +197,9 @@ function Home() {
     try {
       const raw = localStorage.getItem(STORAGE);
       if (!raw) return;
-      const saved = JSON.parse(raw) as { packs?: Packs; done?: string[] };
+      const saved = JSON.parse(raw) as { packs?: Packs; oven?: Oven; done?: string[] };
       if (saved.packs === 1 || saved.packs === 2) setPacks(saved.packs);
+      if (saved.oven === "static" || saved.oven === "turbo") setOven(saved.oven);
       if (Array.isArray(saved.done)) setDone(saved.done);
     } catch {
       /* ignore broken storage */
@@ -146,8 +207,8 @@ function Home() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE, JSON.stringify({ packs, done }));
-  }, [packs, done]);
+    localStorage.setItem(STORAGE, JSON.stringify({ packs, oven, done }));
+  }, [packs, oven, done]);
 
   useEffect(() => {
     if (!running) return;
@@ -164,10 +225,8 @@ function Home() {
   }, [running]);
 
   const qty = packs === 1 ? ONE : TWO;
-  const steps = useMemo(
-    () => (packs === 1 ? STEPS.filter((step) => step.id !== "swap") : STEPS),
-    [packs],
-  );
+  const profile = OVENS[oven];
+  const steps = useMemo(() => buildSteps(oven, packs), [oven, packs]);
   const next = useMemo(
     () => steps.find((step) => !done.includes(step.id)) ?? null,
     [steps, done],
@@ -178,6 +237,14 @@ function Home() {
   function choosePacks(nextPacks: Packs) {
     setPacks(nextPacks);
     if (nextPacks === 1 && timerId === "swap") {
+      setRunning(false);
+      setTimerId(null);
+    }
+  }
+
+  function chooseOven(nextOven: Oven) {
+    setOven(nextOven);
+    if (timerId === "bake" || timerId === "swap") {
       setRunning(false);
       setTimerId(null);
     }
@@ -240,6 +307,11 @@ function Home() {
       <div className="grid grid-cols-2 gap-2" role="group" aria-label="כמות תערובת">
         <PackButton active={packs === 1} onClick={() => choosePacks(1)} label="חבילה אחת" hint="500 גרם" />
         <PackButton active={packs === 2} onClick={() => choosePacks(2)} label="שתי חבילות" hint="1 ק״ג" />
+      </div>
+
+      <div className="mt-2 grid grid-cols-2 gap-2" role="group" aria-label="מצב תנור">
+        <PackButton active={oven === "static"} onClick={() => chooseOven("static")} label="רגיל" hint="210° בלי טורבו" />
+        <PackButton active={oven === "turbo"} onClick={() => chooseOven("turbo")} label="טורבו" hint="190° חום אחיד" />
       </div>
 
       <section className="mt-4" aria-label="כמויות">
@@ -327,11 +399,11 @@ function Home() {
                     </span>
                   </span>
                 </button>
-                {"seconds" in step ? (
+                {step.seconds != null && step.timer ? (
                   <div className="px-4 pb-4">
                     <button
                       type="button"
-                      onClick={() => startTimer(step.id, step.seconds)}
+                      onClick={() => startTimer(step.id, step.seconds ?? 0)}
                       className="inline-flex min-h-11 items-center gap-2 rounded-full bg-ink px-4 text-sm font-semibold text-paper"
                     >
                       <Timer className="size-4" aria-hidden="true" />
@@ -353,19 +425,19 @@ function Home() {
         <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
           <div className="rounded-2xl bg-wheat px-2 py-3">
             <dt className="text-xs font-semibold text-muted">חום</dt>
-            <dd className="font-display mt-1 text-2xl font-bold">210°</dd>
+            <dd className="font-display mt-1 text-2xl font-bold">{profile.temp}</dd>
           </div>
           <div className="rounded-2xl bg-wheat px-2 py-3">
             <dt className="text-xs font-semibold text-muted">זמן</dt>
-            <dd className="font-display mt-1 text-2xl font-bold">25–30</dd>
+            <dd className="font-display mt-1 text-2xl font-bold">{profile.window}</dd>
           </div>
           <div className="rounded-2xl bg-wheat px-2 py-3">
             <dt className="text-xs font-semibold text-muted">מצב</dt>
-            <dd className="font-display mt-1 text-xl font-bold">בלי טורבו</dd>
+            <dd className="font-display mt-1 text-xl font-bold">{profile.mode}</dd>
           </div>
         </dl>
         <p className="mt-3 text-sm leading-relaxed text-muted">
-          הכמויות הן של היבואן, כמו שכתוב על האריזה. הטיימר של האפייה עומד על 28 דקות — אמצע הטווח.
+          {profile.note}
         </p>
       </section>
 
