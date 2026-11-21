@@ -222,7 +222,7 @@ function Home() {
 
       <figure className="ticket overflow-hidden rounded-3xl">
         <img
-          src="/hero.jpg"
+          src={`${import.meta.env.BASE_URL}hero.jpg`}
           alt="לחמניות קשר זהובות על שולחן עץ"
           className="aspect-3/2 w-full object-cover"
         />
