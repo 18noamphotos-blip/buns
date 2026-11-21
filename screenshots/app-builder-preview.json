@@ -1,0 +1,36 @@
+{
+  "url": "http://127.0.0.1:8080/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "לחמניות קשר · מולינו",
+      "hasCanvas": false,
+      "bodyTextLen": 999,
+      "bodyTextHash": "7d4b93eda23d7119f705f6e5a7744525c18198d3ff96bd07f8cae6dd4a80e7a2",
+      "bodyTextPrefix": "FORNO לחמניות קשר מולינו ללא גלוטן לפי האריזה panini al nodo חבי",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "לחמניות קשר · מולינו",
+      "hasCanvas": false,
+      "bodyTextLen": 999,
+      "bodyTextHash": "7d4b93eda23d7119f705f6e5a7744525c18198d3ff96bd07f8cae6dd4a80e7a2",
+      "bodyTextPrefix": "FORNO לחמניות קשר מולינו ללא גלוטן לפי האריזה panini al nodo חבי",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-preview.json"
+}
